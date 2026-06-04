@@ -128,6 +128,62 @@ El árbol es la representación visual del orden de evaluación. Los
 nodos más profundos (hojas) se evalúan primero y el resultado sube
 hacia la raíz.
 
+## Uso del operador NOT
+
+El operador NOT es unario y se aplica al Factor que le sigue
+inmediatamente a la derecha. Según la GLC `Factor → NOT Factor`,
+el operando de NOT puede ser:
+
+- Una variable directa: `NOT A` — válido, no requiere paréntesis
+- Un NOT anidado: `NOT NOT A` — válido, doble negación
+- Una expresión agrupada: `NOT (A AND B)` — válido, paréntesis obligatorios cuando el operando es una expresión AND/OR
+
+Los paréntesis solo son **obligatorios** cuando se quiere aplicar NOT
+a una expresión compuesta con AND u OR. Para variables solas o NOT
+anidados, los paréntesis son opcionales.
+
+### Ejemplos válidos con NOT
+
+| Fórmula | Resultado lógico |
+|---------|-----------------|
+| `NOT A` | Niega A |
+| `NOT NOT A` | Doble negación, equivale a A |
+| `(NOT A)` | Equivalente a NOT A con paréntesis |
+| `NOT (A AND B)` | Niega el resultado de A AND B |
+| `(NOT A) AND (NOT B)` | Niega A y niega B por separado |
+| `NOT (A OR B)` | Niega el resultado de A OR B |
+
+## Casos válidos e inválidos
+
+### Fórmulas válidas
+
+```
+A                          ← variable sola
+NOT A                      ← NOT sin paréntesis
+NOT NOT A                  ← doble negación
+(A AND B)
+(A OR B)
+NOT (A AND B)
+((A AND B) OR (NOT C))
+((NOT A) AND (NOT B))
+(A OR (NOT (B AND C)))
+((A OR B) AND (C OR D))
+```
+
+### Fórmulas inválidas y por qué
+
+| Fórmula | Motivo |
+|---------|--------|
+| `(A AND B` | Paréntesis sin cerrar |
+| `A AND B)` | Paréntesis sin abrir |
+| `AND A` | Operador binario sin operando izquierdo |
+| `A OR` | Operador sin operando derecho |
+| `()` | Paréntesis vacíos |
+| `(AND)` | Operador dentro de paréntesis sin variables |
+| `A AND AND B` | Operador duplicado |
+| `a and b` | Minúsculas no son tokens válidos |
+| `123` | Números no son tokens válidos |
+
 ## Fase 3 — Evaluación Booleana
 
 El sistema recorre el árbol en post-orden:
@@ -142,6 +198,27 @@ El sistema recorre el árbol en post-orden:
 Los valores aleatorios son parte del requisito del escenario. Su
 propósito es demostrar que el sistema evalúa correctamente cualquier
 combinación posible de valores, no solo un caso específico.
+
+### Ejemplo de evaluación
+
+Para `((A OR B) AND (C OR D))` con A=FALSE, B=TRUE, C=FALSE, D=FALSE:
+
+```
+(A OR B)   = (FALSE OR TRUE)   = TRUE
+(C OR D)   = (FALSE OR FALSE)  = FALSE
+TRUE AND FALSE                 = FALSE  ← resultado final
+```
+
+Si los valores cambian a A=FALSE, B=TRUE, C=TRUE, D=FALSE:
+
+```
+(A OR B)   = (FALSE OR TRUE)   = TRUE
+(C OR D)   = (TRUE OR FALSE)   = TRUE
+TRUE AND TRUE                  = TRUE  ← resultado final
+```
+
+El resultado cambia porque los valores son aleatorios en cada análisis.
+Esto es correcto y esperado según el enunciado del escenario.
 
 ## Fase 4 — API REST
 
@@ -206,10 +283,11 @@ refleja el orden de evaluación.
 **Resultado** — valores booleanos asignados aleatoriamente a cada
 variable y el resultado final de evaluar la fórmula completa.
 
-El frontend también valida localmente antes de enviar al servidor:
-paréntesis balanceados, caracteres válidos y estructura básica. Los
-errores se muestran con mensajes descriptivos en lugar de mensajes
-técnicos del servidor.
+El frontend valida localmente antes de enviar al servidor: paréntesis
+balanceados, caracteres válidos y estructura básica. Los errores HTTP
+400 del servidor se muestran como errores de sintaxis con mensaje
+descriptivo. Los errores de red (servidor caído) se muestran como
+errores de conexión con instrucciones para levantar el servidor.
 
 ## Tecnologías utilizadas
 
