@@ -1,0 +1,189 @@
+<div class="layout">
+
+  <!-- ── Sidebar izquierdo ── -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-icon">λ</span>
+      <div>
+        <h1>MatLogEx</h1>
+        <p>Analizador Léxico-Sintáctico</p>
+      </div>
+    </div>
+
+    <div class="input-section">
+      <label class="input-label">Fórmula Lógica</label>
+      <textarea
+        class="formula-input"
+        [(ngModel)]="formula"
+        placeholder="((A AND B) OR (NOT C))"
+        (keydown.enter)="$event.preventDefault(); analizar()"
+        rows="3"
+        aria-label="Ingrese la fórmula lógica"
+      ></textarea>
+      <button class="btn-analizar" (click)="analizar()" [disabled]="cargando">
+        <span *ngIf="!cargando">▶ Analizar</span>
+        <span *ngIf="cargando">⏳ Procesando...</span>
+      </button>
+    </div>
+
+    <div class="ejemplos-section">
+      <p class="section-label">Ejemplos</p>
+      <button *ngFor="let ej of ejemplos" class="btn-ejemplo" (click)="cargarEjemplo(ej)">
+        {{ ej }}
+      </button>
+    </div>
+
+    <div class="operadores-section">
+      <p class="section-label">Tokens válidos</p>
+      <div class="op-grid">
+        <span class="op-chip and">AND</span>
+        <span class="op-chip or">OR</span>
+        <span class="op-chip not">NOT</span>
+        <span class="op-chip var">A–Z</span>
+        <span class="op-chip par">(</span>
+        <span class="op-chip par">)</span>
+      </div>
+    </div>
+
+    <div class="badges-row">
+      <span class="badge">JFlex</span>
+      <span class="badge">CUP</span>
+      <span class="badge">LALR</span>
+    </div>
+  </aside>
+
+  <!-- ── Contenido principal ── -->
+  <main class="content">
+
+    <!-- Estado vacío -->
+    <div class="empty-state" *ngIf="!resultado && !error && !cargando">
+      <div class="empty-icon">λ</div>
+      <h2>Ingresa una fórmula lógica</h2>
+      <p>El sistema realizará el análisis léxico con JFlex y el análisis sintáctico con CUP, generando el árbol de derivación y evaluando el resultado booleano.</p>
+      <div class="pipeline">
+        <div class="pipe-step">
+          <span class="pipe-num">1</span>
+          <span class="pipe-label">Fórmula</span>
+        </div>
+        <span class="pipe-arrow">→</span>
+        <div class="pipe-step">
+          <span class="pipe-num">2</span>
+          <span class="pipe-label">JFlex<br>Tokens</span>
+        </div>
+        <span class="pipe-arrow">→</span>
+        <div class="pipe-step">
+          <span class="pipe-num">3</span>
+          <span class="pipe-label">CUP<br>Parser</span>
+        </div>
+        <span class="pipe-arrow">→</span>
+        <div class="pipe-step">
+          <span class="pipe-num">4</span>
+          <span class="pipe-label">Árbol<br>Sintáctico</span>
+        </div>
+        <span class="pipe-arrow">→</span>
+        <div class="pipe-step">
+          <span class="pipe-num">5</span>
+          <span class="pipe-label">Resultado<br>Booleano</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cargando -->
+    <div class="loading-state" *ngIf="cargando">
+      <div class="loader"></div>
+      <p>Analizando fórmula...</p>
+    </div>
+
+    <!-- Error -->
+    <div class="error-state" *ngIf="error && !cargando" role="alert">
+      <span class="error-icon">⚠</span>
+      <p>{{ error }}</p>
+    </div>
+
+    <!-- Resultado -->
+    <div class="resultado-layout" *ngIf="resultado && !cargando">
+
+      <!-- Fila superior: tabs + resultado -->
+      <div class="top-row">
+
+        <!-- Panel tabs -->
+        <div class="panel tabs-panel">
+          <div class="tabs-header" role="tablist">
+            <button
+              class="tab-btn" [class.active]="tabActiva === 'tokens'"
+              (click)="tabActiva = 'tokens'" role="tab"
+            >
+              Tokens <span class="tab-count">{{ tokens.length }}</span>
+            </button>
+            <button
+              class="tab-btn" [class.active]="tabActiva === 'arbol'"
+              (click)="tabActiva = 'arbol'" role="tab"
+            >
+              Árbol Sintáctico
+            </button>
+          </div>
+
+          <!-- Tabla tokens -->
+          <div class="tab-body" *ngIf="tabActiva === 'tokens'">
+            <table class="token-table">
+              <thead>
+                <tr><th>#</th><th>Lexema</th><th>Token</th><th>Categoría</th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let t of tokens; let i = index">
+                  <td class="td-num">{{ i + 1 }}</td>
+                  <td><code class="lexema">{{ t.lexema }}</code></td>
+                  <td><span class="tbadge" [ngClass]="claseBadge(t.tipo)">{{ t.tipo }}</span></td>
+                  <td class="td-cat">{{ categoriaToken(t.tipo) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Árbol -->
+          <div class="tab-body arbol-body" *ngIf="tabActiva === 'arbol'">
+            <div class="leyenda">
+              <span class="ley"><span class="ldot or"></span>OR</span>
+              <span class="ley"><span class="ldot and"></span>AND</span>
+              <span class="ley"><span class="ldot not"></span>NOT</span>
+              <span class="ley"><span class="ldot var"></span>Variable</span>
+            </div>
+            <div class="tree-wrap">
+              <app-nodo [nodo]="resultado.arbol"></app-nodo>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel resultado -->
+        <div class="side-panels">
+
+          <!-- Variables -->
+          <div class="panel vars-panel">
+            <p class="panel-title">Valores Asignados</p>
+            <div class="vars-grid">
+              <div
+                *ngFor="let v of variablesEntries(resultado.variables)"
+                class="var-chip"
+                [class.vtrue]="v.value"
+                [class.vfalse]="!v.value"
+              >
+                <span class="vname">{{ v.key }}</span>
+                <span class="vval">{{ v.value }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Resultado final -->
+          <div class="panel res-panel" [class.rtrue]="resultado.resultado" [class.rfalse]="!resultado.resultado">
+            <p class="panel-title">Resultado Final</p>
+            <div class="res-formula">{{ resultado.formula }}</div>
+            <div class="res-eq">=</div>
+            <div class="res-val">{{ resultado.resultado ? 'TRUE' : 'FALSE' }}</div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>

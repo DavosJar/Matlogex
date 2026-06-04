@@ -1,0 +1,19 @@
+# ── Node ──
+node_modules/
+npm-debug.log*
+
+# ── Angular build ──
+dist/
+.angular/
+
+# ── Sistema operativo ──
+.DS_Store
+Thumbs.db
+
+# ── IDEs ──
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln

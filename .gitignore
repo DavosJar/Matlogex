@@ -1,24 +1,29 @@
-# ── Java compilado ──
-classes/
+# ── Backend: Java compilado ──
+backend/classes/
+backend/lib/
 *.class
 
-# ── Archivos generados por JFlex y CUP ──
-src/grammar/Lexer.java
-src/grammar/Lexer.java~
-src/grammar/parser.java
-src/grammar/sym.java
-src/grammar/*.states
+# ── Backend: archivos generados por JFlex y CUP ──
+backend/src/grammar/Lexer.java
+backend/src/grammar/Lexer.java~
+backend/src/grammar/parser.java
+backend/src/grammar/sym.java
+backend/src/grammar/*.states
 
-# ── JARs de dependencias ──
-lib/jflex.jar
-lib/java_cup.jar
-lib/java_cup_runtime.jar
-
-# ── Logs de compilación ──
+# ── Backend: logs ──
 jflex.error
 cup.error
 javac.error
 
+# ── Frontend: Node ──
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
 # ── Sistema operativo ──
 .DS_Store
 Thumbs.db
+
+# ── IDEs ──
+.idea/
+.vscode/

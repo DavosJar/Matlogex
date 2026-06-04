@@ -1,0 +1,101 @@
+.nodo-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+/* ── Nodo círculo ── */
+.nodo-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: 0.82rem;
+  color: #fff;
+  position: relative;
+  z-index: 2;
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: default;
+  border: 3px solid rgba(255,255,255,0.15);
+
+  &:hover {
+    transform: scale(1.12);
+    z-index: 10;
+  }
+}
+
+.nodo-and {
+  background: radial-gradient(circle at 35% 35%, #818cf8, #4f46e5);
+  box-shadow: 0 6px 20px rgba(79,70,229,0.5);
+}
+.nodo-or {
+  background: radial-gradient(circle at 35% 35%, #38bdf8, #0284c7);
+  box-shadow: 0 6px 20px rgba(2,132,199,0.5);
+}
+.nodo-not {
+  background: radial-gradient(circle at 35% 35%, #fbbf24, #d97706);
+  box-shadow: 0 6px 20px rgba(217,119,6,0.5);
+}
+.nodo-variable {
+  background: radial-gradient(circle at 35% 35%, #34d399, #059669);
+  box-shadow: 0 6px 20px rgba(5,150,105,0.5);
+  width: 52px;
+  height: 52px;
+  font-size: 1.1rem;
+}
+
+/* ── Conectores ── */
+.conector-vertical {
+  width: 2px;
+  height: 20px;
+  background: #475569;
+  margin: 0 auto;
+}
+
+.nodo-hijos {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
+  position: relative;
+}
+
+.nodo-rama {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 28px;
+  position: relative;
+
+  /* Línea horizontal superior */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #475569;
+  }
+
+  &.solo::before { display: none; }
+  &:first-child::before { left: 50%; }
+  &:last-child::before  { right: 50%; }
+}
+
+.conector-vertical-hijo {
+  width: 2px;
+  height: 16px;
+  background: #475569;
+}
+
+.flecha {
+  font-size: 10px;
+  color: #64748b;
+  margin-bottom: 4px;
+  line-height: 1;
+}
