@@ -285,7 +285,7 @@ public class Lexer implements java_cup.runtime.Scanner {
      * @return Symbol con tipo, posición y lexema
      */
     private Symbol token(int tokenType) {
-        return new Symbol(tokenType, yychar, yychar + yytext().length(), yytext());
+        return new Symbol(tokenType, (int)yychar, (int)(yychar + yytext().length()), yytext());
     }
 
 

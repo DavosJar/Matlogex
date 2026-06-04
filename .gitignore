@@ -1,0 +1,24 @@
+# ── Java compilado ──
+classes/
+*.class
+
+# ── Archivos generados por JFlex y CUP ──
+src/grammar/Lexer.java
+src/grammar/Lexer.java~
+src/grammar/parser.java
+src/grammar/sym.java
+src/grammar/*.states
+
+# ── JARs de dependencias ──
+lib/jflex.jar
+lib/java_cup.jar
+lib/java_cup_runtime.jar
+
+# ── Logs de compilación ──
+jflex.error
+cup.error
+javac.error
+
+# ── Sistema operativo ──
+.DS_Store
+Thumbs.db

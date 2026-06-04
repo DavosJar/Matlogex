@@ -34,7 +34,7 @@ echo "[ 3/4 ] Compilando Java..."
 javac -d "$CLASSES" \
     -classpath "$CUP_RT" \
     -sourcepath "$SRC" \
-    "$BASE/Main.java"
+    "$BASE/Main.java" "$BASE/Server.java"
 if [ $? -ne 0 ]; then echo "ERROR en javac"; exit 1; fi
 
 echo "[ 4/4 ] Ejecutando..."
