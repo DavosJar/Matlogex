@@ -393,3 +393,96 @@ NOT (A AND B)
 **Universidad Nacional de Loja — FEIRNNR**
 **Carrera de Ingeniería en Computación**
 **Teoría de Autómatas y Computabilidad Avanzada**
+
+---
+
+## Descripción de cada archivo del proyecto
+
+### Archivos escritos por el equipo
+
+**`Lexer.jflex`**
+Especificación del analizador léxico. El equipo definió aquí las
+expresiones regulares de cada token y el orden de prioridad de las
+reglas. JFlex lo lee y genera `Lexer.java` automáticamente.
+
+**`parser.cup`**
+Especificación de la gramática libre de contexto y las acciones Java
+que construyen el árbol sintáctico al reconocer cada regla. CUP lo lee
+y genera `parser.java` y `sym.java` automáticamente.
+
+**`Node.java`**
+Clase base abstracta del árbol sintáctico. Define el método `toTree(indent)`
+que todas las clases hijas implementan para visualizar el árbol.
+
+**`BinaryNode.java`**
+Nodo con dos hijos. Representa los operadores binarios AND y OR.
+Almacena el operador, el hijo izquierdo y el hijo derecho.
+
+**`UnaryNode.java`**
+Nodo con un solo hijo. Representa el operador unario NOT.
+Almacena el operador y el operando.
+
+**`VariableNode.java`**
+Nodo hoja sin hijos. Representa las variables booleanas A, B, C, etc.
+Es el elemento terminal del árbol — donde termina la recursión.
+
+**`NodeSerializer.java`**
+Convierte el árbol de nodos a formato JSON sin librerías externas.
+Lo usa `Server.java` para enviar el árbol al frontend Angular.
+
+**`Main.java`**
+Punto de entrada para ejecución por consola. Recibe la fórmula como
+argumento, ejecuta el análisis, imprime el árbol y evalúa la fórmula
+con valores aleatorios. Útil para probar el sistema sin levantar el servidor.
+
+**`Server.java`**
+Servidor HTTP REST usando `com.sun.net.httpserver` del JDK sin
+dependencias externas. Expone `POST /analizar` y `GET /health`.
+
+**`build.sh`**
+Script que compila todo el proyecto en cuatro pasos en orden:
+JFlex → CUP → javac → ejecución de prueba.
+
+**`server.sh`**
+Arranca el servidor REST en el puerto 8080. Si no existe la carpeta
+`classes`, ejecuta `build.sh` automáticamente antes de iniciar.
+
+---
+
+### Archivos generados por JFlex
+
+**`Lexer.java`**
+El AFD compilado. JFlex leyó `Lexer.jflex`, aplicó el algoritmo de
+Thompson para construir el AFN y luego la construcción de subconjuntos
+para obtener el AFD minimizado. El resultado es este archivo Java con
+tablas de transición listas para ejecutarse. No se edita manualmente.
+
+**`Lexer.java~`**
+Backup automático que JFlex guarda cada vez que regenera `Lexer.java`.
+No tiene uso funcional — es solo un respaldo de la versión anterior.
+
+---
+
+### Archivos generados por CUP
+
+**`parser.java`**
+El parser LALR compilado. CUP leyó `parser.cup` y calculó
+automáticamente las tablas de estados del algoritmo LALR. Contiene
+tres tablas: `_production_table` con las 8 reglas de la GLC,
+`_action_table` con las decisiones shift/reduce, y `_reduce_table`
+con las transiciones después de cada reducción. No se edita manualmente.
+
+**`sym.java`**
+Clase con constantes enteras para cada terminal y no-terminal de la
+gramática. Por ejemplo `sym.AND`, `sym.OR`, `sym.VARIABLE`. Tanto
+`Lexer.java` como `parser.java` usan estas constantes para comunicarse
+entre sí durante el análisis.
+
+---
+
+### Carpeta `classes/`
+
+Contiene los archivos `.class` — el bytecode Java que genera javac al
+compilar todos los `.java`. La JVM ejecuta estos archivos cuando se
+corre `server.sh` o `Main.java`. Esta carpeta no se sube al repositorio
+porque se regenera automáticamente con `build.sh`.
