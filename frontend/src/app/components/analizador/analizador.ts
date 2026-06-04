@@ -1,6 +1,7 @@
 import { Component, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 import { AnalizadorService, ResultadoAnalisis, Token } from '../../services/analizador';
 import { NodoComponent } from '../nodo/nodo';
 
@@ -16,9 +17,10 @@ export class AnalizadorComponent {
   formula   = '((A AND B) OR (NOT C))';
   resultado: ResultadoAnalisis | null = null;
   tokens:    Token[] = [];
-  tabActiva: 'tokens' | 'arbol' = 'tokens';
   error:     string | null = null;
+  errorTipo: 'sintaxis' | 'conexion' | null = null;
   cargando  = false;
+  tabActiva: 'tokens' | 'arbol' = 'tokens';
 
   ejemplos = [
     '((A AND B) OR (NOT C))',
@@ -35,9 +37,21 @@ export class AnalizadorComponent {
 
   analizar(): void {
     if (!this.formula.trim()) return;
+
+    const validacion = this.validarFormula(this.formula);
+    if (validacion) {
+      this.error     = validacion;
+      this.errorTipo = 'sintaxis';
+      this.resultado = null;
+      this.tokens    = [];
+      this.cdr.detectChanges();
+      return;
+    }
+
     this.cargando  = true;
     this.resultado = null;
     this.error     = null;
+    this.errorTipo = null;
     this.tokens    = [];
     this.cdr.detectChanges();
 
@@ -49,12 +63,40 @@ export class AnalizadorComponent {
         this.cargando  = false;
         this.cdr.detectChanges();
       },
-      error: () => {
-        this.error    = 'No se pudo conectar con el servidor Java. ¿Está corriendo ./server.sh?';
+      error: (err: HttpErrorResponse) => {
+        // HTTP 400 = el servidor procesó la fórmula pero tiene error sintáctico
+        if (err.status === 400) {
+          this.errorTipo = 'sintaxis';
+          this.error = 'La fórmula tiene un error de sintaxis. Verifica que cada operador tenga sus operandos y que los paréntesis sean correctos. Ejemplo válido: ((A AND B) OR (NOT C))';
+        } else if (err.status === 0) {
+          // Error de red: servidor no disponible
+          this.errorTipo = 'conexion';
+          this.error = 'El servidor Java no está disponible. Ejecuta ./server.sh en la carpeta backend/ y vuelve a intentarlo.';
+        } else {
+          this.errorTipo = 'sintaxis';
+          this.error = 'Ocurrió un error inesperado. Revisa que la fórmula esté bien escrita.';
+        }
         this.cargando = false;
         this.cdr.detectChanges();
       }
     });
+  }
+
+  private validarFormula(formula: string): string | null {
+    let balance = 0;
+    for (const c of formula) {
+      if (c === '(') balance++;
+      if (c === ')') balance--;
+      if (balance < 0) return 'Paréntesis desbalanceados: hay un ) sin su ( correspondiente.';
+    }
+    if (balance > 0) return 'Paréntesis desbalanceados: falta cerrar ' + balance + ' paréntesis.';
+
+    const invalidos = formula.match(/[^A-Z\s()]/g);
+    if (invalidos) {
+      const unicos = [...new Set(invalidos)].join(', ');
+      return `Caracteres no permitidos: "${unicos}". Solo se aceptan letras mayúsculas A–Z, paréntesis y los operadores AND, OR, NOT.`;
+    }
+    return null;
   }
 
   cargarEjemplo(ejemplo: string): void {
@@ -66,7 +108,6 @@ export class AnalizadorComponent {
     return Object.entries(variables).map(([key, value]) => ({ key, value }));
   }
 
-  /** Retorna la clase CSS del badge según el tipo de token */
   categoriaToken(tipo: string): string {
     const mapa: Record<string, string> = {
       AND: 'Operador binario', OR: 'Operador binario', NOT: 'Operador unario',

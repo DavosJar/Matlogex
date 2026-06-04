@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 export interface NodoArbol {
   type:     'binary' | 'unary' | 'variable';
@@ -19,10 +20,14 @@ export interface ResultadoAnalisis {
   error?:    string;
 }
 
-/** Representa un token léxico extraído de la fórmula */
 export interface Token {
   lexema: string;
   tipo:   'AND' | 'OR' | 'NOT' | 'VARIABLE' | 'LPAREN' | 'RPAREN';
+}
+
+export interface ErrorAnalisis {
+  tipo: 'sintaxis' | 'conexion';
+  mensaje: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -33,18 +38,21 @@ export class AnalizadorService {
   constructor(private http: HttpClient) {}
 
   /**
-   * Envía una fórmula lógica al backend para su análisis léxico-sintáctico.
+   * Envía la fórmula al backend y maneja los errores correctamente.
+   * HTTP 400 = fórmula inválida (error de sintaxis)
+   * Error de red = servidor no disponible
    */
   analizar(formula: string): Observable<ResultadoAnalisis> {
-    return this.http.post<ResultadoAnalisis>(`${this.API}/analizar`, { formula });
+    return this.http.post<ResultadoAnalisis>(
+      `${this.API}/analizar`,
+      { formula }
+    ).pipe(
+      catchError((err: HttpErrorResponse) => throwError(() => err))
+    );
   }
 
   /**
-   * Tokeniza la fórmula en el frontend para mostrar la tabla de tokens.
-   * Sigue el mismo orden de precedencia que JFlex: palabras clave antes que variables.
-   *
-   * @param formula Cadena con la fórmula lógica
-   * @returns Array de tokens identificados
+   * Tokeniza la fórmula localmente para mostrar la tabla de tokens.
    */
   tokenizar(formula: string): Token[] {
     const tokens: Token[] = [];
@@ -54,8 +62,8 @@ export class AnalizadorService {
       if (formula.startsWith('AND', i)) { tokens.push({ lexema: 'AND', tipo: 'AND' }); i += 3; continue; }
       if (formula.startsWith('OR',  i)) { tokens.push({ lexema: 'OR',  tipo: 'OR'  }); i += 2; continue; }
       if (formula.startsWith('NOT', i)) { tokens.push({ lexema: 'NOT', tipo: 'NOT' }); i += 3; continue; }
-      if (formula[i] === '(') { tokens.push({ lexema: '(', tipo: 'LPAREN'   }); i++; continue; }
-      if (formula[i] === ')') { tokens.push({ lexema: ')', tipo: 'RPAREN'   }); i++; continue; }
+      if (formula[i] === '(') { tokens.push({ lexema: '(', tipo: 'LPAREN' }); i++; continue; }
+      if (formula[i] === ')') { tokens.push({ lexema: ')', tipo: 'RPAREN' }); i++; continue; }
       if (formula[i] >= 'A' && formula[i] <= 'Z') {
         tokens.push({ lexema: formula[i], tipo: 'VARIABLE' }); i++; continue;
       }

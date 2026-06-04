@@ -1,6 +1,5 @@
 <div class="layout">
 
-  <!-- ── Sidebar izquierdo ── -->
   <aside class="sidebar">
     <div class="brand">
       <span class="brand-icon">λ</span>
@@ -52,7 +51,6 @@
     </div>
   </aside>
 
-  <!-- ── Contenido principal ── -->
   <main class="content">
 
     <!-- Estado vacío -->
@@ -61,30 +59,15 @@
       <h2>Ingresa una fórmula lógica</h2>
       <p>El sistema realizará el análisis léxico con JFlex y el análisis sintáctico con CUP, generando el árbol de derivación y evaluando el resultado booleano.</p>
       <div class="pipeline">
-        <div class="pipe-step">
-          <span class="pipe-num">1</span>
-          <span class="pipe-label">Fórmula</span>
-        </div>
+        <div class="pipe-step"><span class="pipe-num">1</span><span class="pipe-label">Fórmula</span></div>
         <span class="pipe-arrow">→</span>
-        <div class="pipe-step">
-          <span class="pipe-num">2</span>
-          <span class="pipe-label">JFlex<br>Tokens</span>
-        </div>
+        <div class="pipe-step"><span class="pipe-num">2</span><span class="pipe-label">JFlex<br>Tokens</span></div>
         <span class="pipe-arrow">→</span>
-        <div class="pipe-step">
-          <span class="pipe-num">3</span>
-          <span class="pipe-label">CUP<br>Parser</span>
-        </div>
+        <div class="pipe-step"><span class="pipe-num">3</span><span class="pipe-label">CUP<br>Parser</span></div>
         <span class="pipe-arrow">→</span>
-        <div class="pipe-step">
-          <span class="pipe-num">4</span>
-          <span class="pipe-label">Árbol<br>Sintáctico</span>
-        </div>
+        <div class="pipe-step"><span class="pipe-num">4</span><span class="pipe-label">Árbol<br>Sintáctico</span></div>
         <span class="pipe-arrow">→</span>
-        <div class="pipe-step">
-          <span class="pipe-num">5</span>
-          <span class="pipe-label">Resultado<br>Booleano</span>
-        </div>
+        <div class="pipe-step"><span class="pipe-num">5</span><span class="pipe-label">Resultado<br>Booleano</span></div>
       </div>
     </div>
 
@@ -94,36 +77,43 @@
       <p>Analizando fórmula...</p>
     </div>
 
-    <!-- Error -->
+    <!-- Error amigable -->
     <div class="error-state" *ngIf="error && !cargando" role="alert">
-      <span class="error-icon">⚠</span>
-      <p>{{ error }}</p>
+      <div class="error-box"
+        [class.error-sintaxis]="errorTipo === 'sintaxis'"
+        [class.error-conexion]="errorTipo === 'conexion'"
+      >
+        <div class="error-header">
+          <span class="error-icon">{{ errorTipo === 'conexion' ? '🔌' : '⚠️' }}</span>
+          <strong>{{ errorTipo === 'conexion' ? 'Sin conexión al servidor' : 'Fórmula inválida' }}</strong>
+        </div>
+        <p class="error-msg">{{ error }}</p>
+        <div class="error-hint" *ngIf="errorTipo === 'sintaxis'">
+          <p class="hint-title">Ejemplos válidos</p>
+          <code>((A AND B) OR (NOT C))</code>
+          <code>(NOT (A AND B))</code>
+        </div>
+        <div class="error-hint" *ngIf="errorTipo === 'conexion'">
+          <p class="hint-title">Cómo solucionar</p>
+          <code>cd backend && ./server.sh</code>
+        </div>
+      </div>
     </div>
 
     <!-- Resultado -->
     <div class="resultado-layout" *ngIf="resultado && !cargando">
-
-      <!-- Fila superior: tabs + resultado -->
       <div class="top-row">
 
-        <!-- Panel tabs -->
         <div class="panel tabs-panel">
           <div class="tabs-header" role="tablist">
-            <button
-              class="tab-btn" [class.active]="tabActiva === 'tokens'"
-              (click)="tabActiva = 'tokens'" role="tab"
-            >
+            <button class="tab-btn" [class.active]="tabActiva === 'tokens'" (click)="tabActiva = 'tokens'" role="tab">
               Tokens <span class="tab-count">{{ tokens.length }}</span>
             </button>
-            <button
-              class="tab-btn" [class.active]="tabActiva === 'arbol'"
-              (click)="tabActiva = 'arbol'" role="tab"
-            >
+            <button class="tab-btn" [class.active]="tabActiva === 'arbol'" (click)="tabActiva = 'arbol'" role="tab">
               Árbol Sintáctico
             </button>
           </div>
 
-          <!-- Tabla tokens -->
           <div class="tab-body" *ngIf="tabActiva === 'tokens'">
             <table class="token-table">
               <thead>
@@ -140,7 +130,6 @@
             </table>
           </div>
 
-          <!-- Árbol -->
           <div class="tab-body arbol-body" *ngIf="tabActiva === 'arbol'">
             <div class="leyenda">
               <span class="ley"><span class="ldot or"></span>OR</span>
@@ -154,10 +143,7 @@
           </div>
         </div>
 
-        <!-- Panel resultado -->
         <div class="side-panels">
-
-          <!-- Variables -->
           <div class="panel vars-panel">
             <p class="panel-title">Valores Asignados</p>
             <div class="vars-grid">
@@ -173,17 +159,19 @@
             </div>
           </div>
 
-          <!-- Resultado final -->
-          <div class="panel res-panel" [class.rtrue]="resultado.resultado" [class.rfalse]="!resultado.resultado">
+          <div class="panel res-panel"
+            [class.rtrue]="resultado.resultado"
+            [class.rfalse]="!resultado.resultado"
+          >
             <p class="panel-title">Resultado Final</p>
             <div class="res-formula">{{ resultado.formula }}</div>
             <div class="res-eq">=</div>
             <div class="res-val">{{ resultado.resultado ? 'TRUE' : 'FALSE' }}</div>
           </div>
-
         </div>
-      </div>
 
+      </div>
     </div>
+
   </main>
 </div>
