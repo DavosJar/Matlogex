@@ -486,3 +486,178 @@ Contiene los archivos `.class` — el bytecode Java que genera javac al
 compilar todos los `.java`. La JVM ejecuta estos archivos cuando se
 corre `server.sh` o `Main.java`. Esta carpeta no se sube al repositorio
 porque se regenera automáticamente con `build.sh`.
+
+---
+
+## Evaluación Booleana — Explicación detallada
+
+### ¿Qué significa TRUE o FALSE en el resultado?
+
+Cuando el usuario ingresa una fórmula y presiona Analizar, el sistema
+realiza tres operaciones en orden:
+
+1. **Analiza léxicamente** la fórmula y extrae los tokens
+2. **Construye el árbol sintáctico** respetando la precedencia de operadores
+3. **Evalúa el árbol** asignando valores aleatorios a las variables
+
+El resultado TRUE o FALSE es el valor lógico final de toda la fórmula
+después de evaluar cada operador con los valores asignados.
+
+---
+
+### ¿Por qué los valores son aleatorios?
+
+En `Server.java`, la asignación de valores se hace con:
+
+```java
+Random random = new Random();
+for (String var : values.keySet()) {
+    values.put(var, random.nextBoolean());
+}
+```
+
+Cada vez que se presiona Analizar, `random.nextBoolean()` genera un nuevo
+valor `true` o `false` para cada variable. Por eso el resultado puede
+cambiar entre ejecuciones con la misma fórmula.
+
+El propósito no es calcular un resultado fijo — es demostrar que el árbol
+sintáctico evalúa correctamente la fórmula para **cualquier combinación
+posible** de valores booleanos.
+
+---
+
+### ¿Cómo se evalúa el árbol?
+
+El árbol se recorre en **post-orden**: primero los hijos, luego el padre.
+Esto garantiza que los operadores de mayor precedencia (más profundos en
+el árbol) se evalúen antes que los de menor precedencia.
+
+El código en `Server.java` que implementa esto es:
+
+```java
+private static boolean evaluate(Node node, Map<String, Boolean> values) {
+    if (node instanceof VariableNode) {
+        return values.get(((VariableNode) node).getName());
+    }
+    if (node instanceof UnaryNode) {
+        return !evaluate(((UnaryNode) node).getOperand(), values);
+    }
+    if (node instanceof BinaryNode) {
+        BinaryNode b = (BinaryNode) node;
+        boolean left  = evaluate(b.getLeft(),  values);
+        boolean right = evaluate(b.getRight(), values);
+        return b.getOperator().equals("AND") ? left && right : left || right;
+    }
+}
+```
+
+---
+
+### Ejemplo completo paso a paso
+
+**Fórmula:** `((A AND B) OR (NOT C))`
+
+**Árbol sintáctico generado por CUP:**
+```
+        OR
+       /  \
+     AND   NOT
+    /  \    \
+   A    B    C
+```
+
+**Ejecución 1 — valores asignados aleatoriamente:**
+```
+A = true
+B = false
+C = true
+```
+
+El árbol se evalúa de abajo hacia arriba:
+```
+Nivel hoja:
+  A = true
+  B = false
+  C = true
+
+Nivel 2:
+  AND → A AND B → true AND false → false
+  NOT → NOT C  → NOT true       → false
+
+Nivel raíz:
+  OR → false OR false → false
+
+Resultado final: FALSE
+```
+
+**Ejecución 2 — nuevos valores aleatorios:**
+```
+A = true
+B = true
+C = false
+```
+
+```
+Nivel hoja:
+  A = true
+  B = true
+  C = false
+
+Nivel 2:
+  AND → A AND B → true AND true  → true
+  NOT → NOT C  → NOT false       → true
+
+Nivel raíz:
+  OR → true OR true → true
+
+Resultado final: TRUE
+```
+
+El resultado cambia porque C pasó de true a false, lo que hizo que
+`NOT C` cambiara de false a true, y con `A AND B = true`, el OR final
+produjo TRUE.
+
+---
+
+### Tabla de verdad completa para `((A AND B) OR (NOT C))`
+
+| A | B | C | A AND B | NOT C | Resultado |
+|---|---|---|---------|-------|-----------|
+| false | false | false | false | true  | **TRUE**  |
+| false | false | true  | false | false | **FALSE** |
+| false | true  | false | false | true  | **TRUE**  |
+| false | true  | true  | false | false | **FALSE** |
+| true  | false | false | false | true  | **TRUE**  |
+| true  | false | true  | false | false | **FALSE** |
+| true  | true  | false | true  | true  | **TRUE**  |
+| true  | true  | true  | true  | false | **TRUE**  |
+
+El sistema puede producir cualquiera de estos 8 resultados dependiendo
+de los valores aleatorios que genere en cada ejecución. Esto demuestra
+que el árbol sintáctico y la evaluación booleana funcionan correctamente
+para todas las combinaciones posibles.
+
+---
+
+### Reglas de evaluación por operador
+
+| Operador | Tipo | Regla |
+|----------|------|-------|
+| `AND` | Binario | Solo es TRUE si ambos operandos son TRUE |
+| `OR` | Binario | Es TRUE si al menos uno de los operandos es TRUE |
+| `NOT` | Unario | Invierte el valor del operando |
+
+### Precedencia de evaluación
+
+La GLC diseñada en `parser.cup` garantiza este orden:
+
+```
+1. NOT    ← se evalúa primero (mayor precedencia, nivel Factor)
+2. AND    ← se evalúa segundo (precedencia media, nivel Term)
+3. OR     ← se evalúa último  (menor precedencia, nivel Exp)
+4. ( )    ← fuerza cualquier orden explícitamente
+```
+
+Los paréntesis anulan la precedencia natural. Por ejemplo en
+`(A OR B) AND C`, el OR se evalúa primero porque está entre paréntesis,
+aunque normalmente AND tiene mayor precedencia que OR.
