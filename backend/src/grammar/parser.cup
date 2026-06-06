@@ -3,82 +3,93 @@ package grammar;
 import java_cup.runtime.*;
 import grammar.node.*;
 
-/*
- * parser.cup - Analizador sintáctico LALR para fórmulas lógicas.
- * GLC no ambigua con precedencia: NOT > AND > OR
- *
- * Reglas de producción (Tabla 7 del documento):
- *   Exp    → Exp OR Term | Term
- *   Term   → Term AND Factor | Factor
- *   Factor → NOT Factor | ( Exp ) | VARIABLE
- */
-
 parser code {:
     private Lexer lexer;
 
-    /**
-     * Constructor que recibe el lexer ya instanciado.
-     *
-     * @param lexer Instancia del analizador léxico
-     */
     public parser(Lexer lexer) {
         this();
         this.lexer = lexer;
     }
 
-    /**
-     * Reporta un error sintáctico con la posición del token problemático.
-     *
-     * @param message Mensaje de error
-     * @param info    Token que causó el error
-     */
     @Override
     public void report_error(String message, Object info) {
         if (info instanceof Symbol) {
             Symbol s = (Symbol) info;
-            System.err.println("Error sintáctico en posición " + s.left
+            System.err.println("Error sintactico en posicion " + s.left
                 + ": token '" + s.value + "'");
         } else {
-            System.err.println("Error sintáctico: " + message);
+            System.err.println("Error sintactico: " + message);
         }
     }
 :};
 
 scan with {: return lexer.next_token(); :};
 
-/* ── Terminales ── */
-terminal            AND, OR, NOT, LPAREN, RPAREN;
-terminal String     VARIABLE;
+terminal String    AND, OR, NOT, LPAREN, RPAREN;
+terminal String    VARIABLE;
 
-/* ── No terminales ── */
-nonterminal Node    Exp, Term, Factor;
+nonterminal ParseNode    Exp, Term, Factor;
 
-/* ── Gramática (precedencia implícita por estructura) ── */
 start with Exp;
 
 Exp ::=
-    Exp:left OR Term:right
-    {: RESULT = new BinaryNode("OR", left, right); :}
+    Exp:left OR:op Term:right
+    {: 
+        ParseNode n = new ParseNode("Exp");
+        n.add(left);
+        n.add(new ParseNode("OR", op));
+        n.add(right);
+        RESULT = n;
+    :}
     |
     Term:t
-    {: RESULT = t; :}
+    {:
+        ParseNode n = new ParseNode("Exp");
+        n.add(t);
+        RESULT = n;
+    :}
     ;
 
 Term ::=
-    Term:left AND Factor:right
-    {: RESULT = new BinaryNode("AND", left, right); :}
+    Term:left AND:op Factor:right
+    {:
+        ParseNode n = new ParseNode("Term");
+        n.add(left);
+        n.add(new ParseNode("AND", op));
+        n.add(right);
+        RESULT = n;
+    :}
     |
     Factor:f
-    {: RESULT = f; :}
+    {:
+        ParseNode n = new ParseNode("Term");
+        n.add(f);
+        RESULT = n;
+    :}
     ;
 
 Factor ::=
-    NOT Factor:operand
-    {: RESULT = new UnaryNode("NOT", operand); :}
+    NOT:op Factor:operand
+    {:
+        ParseNode n = new ParseNode("Factor");
+        n.add(new ParseNode("NOT", op));
+        n.add(operand);
+        RESULT = n;
+    :}
     |
-    LPAREN Exp:e RPAREN
-    {: RESULT = e; :}
+    LPAREN:lp Exp:e RPAREN:rp
+    {:
+        ParseNode n = new ParseNode("Factor");
+        n.add(new ParseNode("LPAREN", lp));
+        n.add(e);
+        n.add(new ParseNode("RPAREN", rp));
+        RESULT = n;
+    :}
     |
     VARIABLE:v
-    {: RESULT = new VariableNode(v); :}
+    {:
+        ParseNode n = new ParseNode("Factor");
+        n.add(new ParseNode("VARIABLE", v));
+        RESULT = n;
+    :}
     ;

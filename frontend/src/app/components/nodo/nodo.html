@@ -7,30 +7,13 @@
   <ng-container *ngIf="tieneHijos">
     <div class="conector-vertical"></div>
     <div class="nodo-hijos">
-
-      <ng-container *ngIf="nodo.type === 'binary'">
-        <div class="nodo-rama">
-          <div class="conector-horizontal"></div>
-          <div class="conector-vertical-hijo"></div>
-          <div class="flecha">▼</div>
-          <app-nodo [nodo]="nodo.left!"></app-nodo>
-        </div>
-        <div class="nodo-rama">
-          <div class="conector-horizontal"></div>
-          <div class="conector-vertical-hijo"></div>
-          <div class="flecha">▼</div>
-          <app-nodo [nodo]="nodo.right!"></app-nodo>
-        </div>
-      </ng-container>
-
-      <ng-container *ngIf="nodo.type === 'unary'">
-        <div class="nodo-rama solo">
-          <div class="conector-vertical-hijo"></div>
-          <div class="flecha">▼</div>
-          <app-nodo [nodo]="nodo.operand!"></app-nodo>
-        </div>
-      </ng-container>
-
+      <div class="nodo-rama" *ngFor="let child of nodo.children!">
+        <div class="conector-horizontal"></div>
+        <div class="conector-vertical-hijo"></div>
+        <div class="flecha">▼</div>
+        <app-nodo [nodo]="child"></app-nodo>
+      </div>
     </div>
   </ng-container>
+
 </div>

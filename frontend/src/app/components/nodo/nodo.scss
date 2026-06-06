@@ -48,6 +48,22 @@
   font-size: 1.1rem;
 }
 
+.nodo-paren {
+  background: radial-gradient(circle at 35% 35%, #a78bfa, #7c3aed);
+  box-shadow: 0 6px 20px rgba(124,58,237,0.4);
+  width: 48px;
+  height: 48px;
+  font-size: 1rem;
+}
+
+.nodo-default {
+  background: radial-gradient(circle at 35% 35%, #64748b, #475569);
+  box-shadow: 0 6px 20px rgba(71,85,105,0.4);
+  width: 52px;
+  height: 52px;
+  font-size: 0.7rem;
+}
+
 /* ── Conectores ── */
 .conector-vertical {
   width: 2px;

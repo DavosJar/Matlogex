@@ -44,6 +44,28 @@
       </div>
     </div>
 
+    <div class="vars-section" *ngIf="resultado">
+      <p class="section-label">Valores Asignados</p>
+      <div class="vars-grid">
+        <div *ngFor="let v of variablesEntries(resultado.variables)"
+             class="var-chip"
+             [class.vtrue]="v.value"
+             [class.vfalse]="!v.value">
+          <span class="vname">{{ v.key }}</span>
+          <span class="vval">{{ v.value }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="result-section" *ngIf="resultado"
+         [class.rtrue]="resultado.resultado"
+         [class.rfalse]="!resultado.resultado">
+      <p class="section-label">Resultado Final</p>
+      <div class="result-display">
+        <span class="rd-val">{{ resultado.resultado ? 'TRUE' : 'FALSE' }}</span>
+      </div>
+    </div>
+
     <div class="badges-row">
       <span class="badge">JFlex</span>
       <span class="badge">CUP</span>
@@ -77,6 +99,47 @@
       <p>Analizando fórmula...</p>
     </div>
 
+    <!-- Tokens: visibles siempre que haya tokens, independientemente del error/resultado -->
+    <div class="panel tabs-panel" *ngIf="tokens.length > 0 && !cargando">
+      <div class="tabs-header" role="tablist">
+        <button class="tab-btn" [class.active]="tabActiva === 'tokens'" (click)="tabActiva = 'tokens'" role="tab">
+          Tokens <span class="tab-count">{{ tokens.length }}</span>
+        </button>
+        <button class="tab-btn" *ngIf="resultado" [class.active]="tabActiva === 'arbol'" (click)="tabActiva = 'arbol'" role="tab">
+          Árbol Sintáctico
+        </button>
+      </div>
+
+      <div class="tab-body" *ngIf="tabActiva === 'tokens'">
+        <table class="token-table">
+          <thead>
+            <tr><th>#</th><th>Lexema</th><th>Token</th><th>Categoría</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let t of tokens; let i = index">
+              <td class="td-num">{{ i + 1 }}</td>
+              <td><code class="lexema">{{ t.lexema }}</code></td>
+              <td><span class="tbadge" [ngClass]="claseBadge(t.tipo)">{{ t.tipo }}</span></td>
+              <td class="td-cat">{{ categoriaToken(t.tipo) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tab-body arbol-body" *ngIf="tabActiva === 'arbol' && resultado">
+        <div class="leyenda">
+          <span class="ley"><span class="ldot or"></span>OR</span>
+          <span class="ley"><span class="ldot and"></span>AND</span>
+          <span class="ley"><span class="ldot not"></span>NOT</span>
+          <span class="ley"><span class="ldot var"></span>Variable</span>
+          <span class="ley"><span class="ldot paren"></span>( )</span>
+        </div>
+        <div class="tree-wrap" [style.zoom]="zoomLevel">
+          <app-nodo [nodo]="resultado.arbol"></app-nodo>
+        </div>
+      </div>
+    </div>
+
     <!-- Error amigable -->
     <div class="error-state" *ngIf="error && !cargando" role="alert">
       <div class="error-box"
@@ -100,78 +163,7 @@
       </div>
     </div>
 
-    <!-- Resultado -->
-    <div class="resultado-layout" *ngIf="resultado && !cargando">
-      <div class="top-row">
 
-        <div class="panel tabs-panel">
-          <div class="tabs-header" role="tablist">
-            <button class="tab-btn" [class.active]="tabActiva === 'tokens'" (click)="tabActiva = 'tokens'" role="tab">
-              Tokens <span class="tab-count">{{ tokens.length }}</span>
-            </button>
-            <button class="tab-btn" [class.active]="tabActiva === 'arbol'" (click)="tabActiva = 'arbol'" role="tab">
-              Árbol Sintáctico
-            </button>
-          </div>
-
-          <div class="tab-body" *ngIf="tabActiva === 'tokens'">
-            <table class="token-table">
-              <thead>
-                <tr><th>#</th><th>Lexema</th><th>Token</th><th>Categoría</th></tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let t of tokens; let i = index">
-                  <td class="td-num">{{ i + 1 }}</td>
-                  <td><code class="lexema">{{ t.lexema }}</code></td>
-                  <td><span class="tbadge" [ngClass]="claseBadge(t.tipo)">{{ t.tipo }}</span></td>
-                  <td class="td-cat">{{ categoriaToken(t.tipo) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="tab-body arbol-body" *ngIf="tabActiva === 'arbol'">
-            <div class="leyenda">
-              <span class="ley"><span class="ldot or"></span>OR</span>
-              <span class="ley"><span class="ldot and"></span>AND</span>
-              <span class="ley"><span class="ldot not"></span>NOT</span>
-              <span class="ley"><span class="ldot var"></span>Variable</span>
-            </div>
-            <div class="tree-wrap">
-              <app-nodo [nodo]="resultado.arbol"></app-nodo>
-            </div>
-          </div>
-        </div>
-
-        <div class="side-panels">
-          <div class="panel vars-panel">
-            <p class="panel-title">Valores Asignados</p>
-            <div class="vars-grid">
-              <div
-                *ngFor="let v of variablesEntries(resultado.variables)"
-                class="var-chip"
-                [class.vtrue]="v.value"
-                [class.vfalse]="!v.value"
-              >
-                <span class="vname">{{ v.key }}</span>
-                <span class="vval">{{ v.value }}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="panel res-panel"
-            [class.rtrue]="resultado.resultado"
-            [class.rfalse]="!resultado.resultado"
-          >
-            <p class="panel-title">Resultado Final</p>
-            <div class="res-formula">{{ resultado.formula }}</div>
-            <div class="res-eq">=</div>
-            <div class="res-val">{{ resultado.resultado ? 'TRUE' : 'FALSE' }}</div>
-          </div>
-        </div>
-
-      </div>
-    </div>
 
   </main>
 </div>

@@ -3,60 +3,59 @@ import grammar.parser;
 import grammar.node.*;
 import java_cup.runtime.*;
 import java.io.StringReader;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 /**
- * Clase principal del analizador de fórmulas lógicas.
- * Recibe una fórmula por argumento, ejecuta el análisis léxico
- * y sintáctico, imprime el árbol sintáctico y evalúa la fórmula
- * asignando valores booleanos aleatorios a cada variable.
+ * Interfaz de linea de comandos para probar el analizador sintactico.
+ * Uso: java Main "<formula>"
+ *
+ * Ejecuta todo el pipeline: lexer -> parser -> arbol -> variables aleatorias -> evaluacion.
  */
 public class Main {
 
     /**
-     * Evalúa recursivamente el árbol sintáctico con los valores
-     * asignados a cada variable.
+     * Evalua el arbol sintactico en post-order interpretando los labels de la GLC:
      *
-     * @param node   Nodo raíz o subárbol a evaluar
-     * @param values Mapa de variable → valor booleano
-     * @return Resultado booleano de la fórmula
+     *   Exp: si 3 hijos -> OR; si 1 -> pasa al hijo
+     *   Term: si 3 hijos -> AND; si 1 -> pasa al hijo
+     *   Factor: si 2 hijos -> NOT; si 3 -> (Exp) pasa al medio; si 1 -> variable
      */
-    private static boolean evaluate(Node node, Map<String, Boolean> values) {
-        if (node instanceof VariableNode) {
-            String name = ((VariableNode) node).getName();
-            return values.get(name);
+    private static boolean evaluate(ParseNode node, Map<String, Boolean> values) {
+        String label = node.getLabel();
+        List<ParseNode> c = node.getChildren();
+
+        if ("Exp".equals(label)) {
+            if (c.size() == 3) {
+                return evaluate(c.get(0), values) || evaluate(c.get(2), values);
+            }
+            return evaluate(c.get(0), values);
         }
-        if (node instanceof UnaryNode) {
-            UnaryNode u = (UnaryNode) node;
-            boolean operand = evaluate(u.getOperand(), values);
-            return !operand;
+        if ("Term".equals(label)) {
+            if (c.size() == 3) {
+                return evaluate(c.get(0), values) && evaluate(c.get(2), values);
+            }
+            return evaluate(c.get(0), values);
         }
-        if (node instanceof BinaryNode) {
-            BinaryNode b = (BinaryNode) node;
-            boolean left  = evaluate(b.getLeft(),  values);
-            boolean right = evaluate(b.getRight(), values);
-            if (b.getOperator().equals("AND")) return left && right;
-            if (b.getOperator().equals("OR"))  return left || right;
+        if ("Factor".equals(label)) {
+            if (c.size() == 2) {
+                return !evaluate(c.get(1), values);
+            }
+            if (c.size() == 3) {
+                return evaluate(c.get(1), values);
+            }
+            return values.get(c.get(0).getValue());
         }
-        throw new RuntimeException("Nodo desconocido: " + node.getClass());
+        throw new RuntimeException("Nodo desconocido: " + label);
     }
 
-    /**
-     * Recorre el árbol y recolecta todos los nombres de variables únicas.
-     *
-     * @param node      Nodo a recorrer
-     * @param variables Mapa donde se registran las variables encontradas
-     */
-    private static void collectVariables(Node node, Map<String, Boolean> variables) {
-        if (node instanceof VariableNode) {
-            variables.put(((VariableNode) node).getName(), false);
-        } else if (node instanceof UnaryNode) {
-            collectVariables(((UnaryNode) node).getOperand(), variables);
-        } else if (node instanceof BinaryNode) {
-            collectVariables(((BinaryNode) node).getLeft(),  variables);
-            collectVariables(((BinaryNode) node).getRight(), variables);
+    /** Recolecta los nombres de las variables del arbol. */
+    private static void collectVariables(ParseNode node, Map<String, Boolean> variables) {
+        if ("VARIABLE".equals(node.getLabel())) {
+            variables.put(node.getValue(), false);
+            return;
+        }
+        for (ParseNode child : node.getChildren()) {
+            collectVariables(child, variables);
         }
     }
 
@@ -69,19 +68,16 @@ public class Main {
 
         String formula = args[0];
         System.out.println("Formula: " + formula);
-        System.out.println("─────────────────────────────");
+        System.out.println("-----------------------------");
 
-        // Análisis léxico y sintáctico
         Lexer  lexer  = new Lexer(new StringReader(formula));
         parser parser = new parser(lexer);
-        Node   tree   = (Node) parser.parse().value;
+        ParseNode tree = (ParseNode) parser.parse().value;
 
-        // Árbol sintáctico
-        System.out.println("Arbol sintáctico:");
+        System.out.println("Arbol sintactico:");
         System.out.println(tree.toTree("  "));
-        System.out.println("─────────────────────────────");
+        System.out.println("-----------------------------");
 
-        // Asignar valores aleatorios a las variables
         Map<String, Boolean> values = new HashMap<>();
         collectVariables(tree, values);
         Random random = new Random();
@@ -89,14 +85,12 @@ public class Main {
             values.put(var, random.nextBoolean());
         }
 
-        // Mostrar valores asignados
         System.out.println("Valores asignados:");
         for (Map.Entry<String, Boolean> entry : values.entrySet()) {
             System.out.println("  " + entry.getKey() + " = " + entry.getValue());
         }
-        System.out.println("─────────────────────────────");
+        System.out.println("-----------------------------");
 
-        // Resultado final
         boolean result = evaluate(tree, values);
         System.out.println("Resultado: " + result);
     }

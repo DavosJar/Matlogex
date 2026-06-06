@@ -3,15 +3,14 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
+/** Nodo del arbol sintactico devuelto por el backend. */
 export interface NodoArbol {
-  type:     'binary' | 'unary' | 'variable';
-  operator?: string;
-  name?:     string;
-  left?:     NodoArbol;
-  right?:    NodoArbol;
-  operand?:  NodoArbol;
+  label:     string;
+  value?:    string;
+  children?: NodoArbol[];
 }
 
+/** Respuesta completa del endpoint /analizar. */
 export interface ResultadoAnalisis {
   formula:   string;
   arbol:     NodoArbol;
@@ -20,11 +19,13 @@ export interface ResultadoAnalisis {
   error?:    string;
 }
 
+/** Token individual reconocido por el tokenizador local. */
 export interface Token {
   lexema: string;
   tipo:   'AND' | 'OR' | 'NOT' | 'VARIABLE' | 'LPAREN' | 'RPAREN';
 }
 
+/** Error de analisis categorizado para mostrar en la UI. */
 export interface ErrorAnalisis {
   tipo: 'sintaxis' | 'conexion';
   mensaje: string;
@@ -38,9 +39,8 @@ export class AnalizadorService {
   constructor(private http: HttpClient) {}
 
   /**
-   * Envía la fórmula al backend y maneja los errores correctamente.
-   * HTTP 400 = fórmula inválida (error de sintaxis)
-   * Error de red = servidor no disponible
+   * Envia la formula al backend via POST /analizar.
+   * HTTP 400 = error de sintaxis, error de red = servidor caido.
    */
   analizar(formula: string): Observable<ResultadoAnalisis> {
     return this.http.post<ResultadoAnalisis>(
@@ -52,7 +52,9 @@ export class AnalizadorService {
   }
 
   /**
-   * Tokeniza la fórmula localmente para mostrar la tabla de tokens.
+   * Tokenizador local que replica las reglas del Lexer.jflex.
+   * Solo reconoce AND, OR, NOT, parentesis y variables A-Z,
+   * ignorando espacios y tabs.
    */
   tokenizar(formula: string): Token[] {
     const tokens: Token[] = [];

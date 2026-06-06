@@ -6,64 +6,63 @@ import java.io.*;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java_cup.runtime.*;
 
 /**
- * Servidor HTTP REST que expone el analizador léxico-sintáctico.
- * Escucha en el puerto 8080 y responde en JSON con CORS habilitado.
- *
+ * Servidor HTTP que expone el analizador sintactico via REST.
  * Endpoints:
- *   POST /analizar  — body: { "formula": "((A AND B) OR (NOT C))" }
- *   GET  /health    — verifica que el servidor está activo
+ *   GET  /health  - health check
+ *   POST /analizar - recibe {"formula":"..."}, devuelve arbol, variables y resultado
  */
 public class Server {
 
     /**
-     * Evalúa recursivamente el árbol con los valores asignados.
+     * Evalua el arbol sintactico en post-order interpretando los labels de la GLC:
      *
-     * @param node   Nodo a evaluar
-     * @param values Mapa variable → booleano
-     * @return Resultado booleano
+     *   Exp:     si tiene 3 hijos (Exp OR Term) -> OR, si tiene 1 (Exp -> Term) -> pasa al hijo
+     *   Term:    si tiene 3 hijos (Term AND Factor) -> AND, si tiene 1 -> pasa al hijo
+     *   Factor:  si tiene 2 hijos (NOT Factor) -> negacion
+     *            si tiene 3 hijos (LPAREN Exp RPAREN) -> pasa al hijo del medio
+     *            si tiene 1 hijo (VARIABLE) -> lookup en values
      */
-    private static boolean evaluate(Node node, Map<String, Boolean> values) {
-        if (node instanceof VariableNode) {
-            return values.get(((VariableNode) node).getName());
+    private static boolean evaluate(ParseNode node, Map<String, Boolean> values) {
+        String label = node.getLabel();
+        List<ParseNode> c = node.getChildren();
+
+        if ("Exp".equals(label)) {
+            if (c.size() == 3) {
+                return evaluate(c.get(0), values) || evaluate(c.get(2), values);
+            }
+            return evaluate(c.get(0), values);
         }
-        if (node instanceof UnaryNode) {
-            return !evaluate(((UnaryNode) node).getOperand(), values);
+        if ("Term".equals(label)) {
+            if (c.size() == 3) {
+                return evaluate(c.get(0), values) && evaluate(c.get(2), values);
+            }
+            return evaluate(c.get(0), values);
         }
-        if (node instanceof BinaryNode) {
-            BinaryNode b = (BinaryNode) node;
-            boolean left  = evaluate(b.getLeft(),  values);
-            boolean right = evaluate(b.getRight(), values);
-            return b.getOperator().equals("AND") ? left && right : left || right;
+        if ("Factor".equals(label)) {
+            if (c.size() == 2) {
+                return !evaluate(c.get(1), values);
+            }
+            if (c.size() == 3) {
+                return evaluate(c.get(1), values);
+            }
+            return values.get(c.get(0).getValue());
         }
-        throw new RuntimeException("Nodo desconocido");
+        throw new RuntimeException("Nodo desconocido: " + label);
     }
 
-    /**
-     * Recorre el árbol y registra todas las variables únicas encontradas.
-     *
-     * @param node      Nodo a recorrer
-     * @param variables Mapa donde se acumulan las variables
-     */
-    private static void collectVariables(Node node, Map<String, Boolean> variables) {
-        if (node instanceof VariableNode) {
-            variables.put(((VariableNode) node).getName(), false);
-        } else if (node instanceof UnaryNode) {
-            collectVariables(((UnaryNode) node).getOperand(), variables);
-        } else if (node instanceof BinaryNode) {
-            collectVariables(((BinaryNode) node).getLeft(),  variables);
-            collectVariables(((BinaryNode) node).getRight(), variables);
+    /** Recolecta los nombres de variables declaradas en el arbol. */
+    private static void collectVariables(ParseNode node, Map<String, Boolean> variables) {
+        if ("VARIABLE".equals(node.getLabel())) {
+            variables.put(node.getValue(), false);
+            return;
+        }
+        for (ParseNode child : node.getChildren()) {
+            collectVariables(child, variables);
         }
     }
 
-    /**
-     * Agrega headers CORS a la respuesta para permitir
-     * peticiones desde el frontend Angular en localhost:4200.
-     *
-     * @param exchange Objeto de intercambio HTTP
-     */
     private static void addCorsHeaders(HttpExchange exchange) {
         Headers headers = exchange.getResponseHeaders();
         headers.add("Access-Control-Allow-Origin",  "*");
@@ -73,12 +72,8 @@ public class Server {
     }
 
     /**
-     * Extrae el valor de una clave de un JSON simple de una sola línea.
-     * Solo funciona para JSONs planos con strings, no anidados.
-     *
-     * @param json JSON en texto plano
-     * @param key  Clave a buscar
-     * @return Valor asociado a la clave o null si no existe
+     * Extraccion simple del valor de una clave en JSON.
+     * Busca "key":"...", sin soporte para escape sequences (limitacion conocida).
      */
     private static String extractJsonString(String json, String key) {
         String search = "\"" + key + "\"";
@@ -93,7 +88,6 @@ public class Server {
     public static void main(String[] args) throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
 
-        // ── Endpoint: GET /health ──
         server.createContext("/health", exchange -> {
             addCorsHeaders(exchange);
             if (exchange.getRequestMethod().equalsIgnoreCase("OPTIONS")) {
@@ -107,7 +101,6 @@ public class Server {
             exchange.getResponseBody().close();
         });
 
-        // ── Endpoint: POST /analizar ──
         server.createContext("/analizar", exchange -> {
             addCorsHeaders(exchange);
 
@@ -126,10 +119,12 @@ public class Server {
             int statusCode = 200;
 
             try {
+                // 1. Lexear + parsear -> arbol sintactico
                 Lexer  lexer  = new Lexer(new java.io.StringReader(formula));
                 parser p      = new parser(lexer);
-                Node   tree   = (Node) p.parse().value;
+                ParseNode tree = (ParseNode) p.parse().value;
 
+                // 2. Recolectar variables y asignar valores aleatorios
                 Map<String, Boolean> values = new LinkedHashMap<>();
                 collectVariables(tree, values);
                 Random random = new Random();
@@ -137,9 +132,10 @@ public class Server {
                     values.put(var, random.nextBoolean());
                 }
 
+                // 3. Evaluar
                 boolean result = evaluate(tree, values);
 
-                // Construir JSON de variables
+                // 4. Construir respuesta
                 StringBuilder varsJson = new StringBuilder("{");
                 int i = 0;
                 for (Map.Entry<String, Boolean> e : values.entrySet()) {
