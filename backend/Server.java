@@ -30,24 +30,24 @@ public class Server {
 
         if ("Exp".equals(label)) {
             if (c.size() == 3) {
-                return evaluate(c.get(0), values) || evaluate(c.get(2), values);
+                return evaluate(c.get(0), values) || evaluate(c.get(2), values); // OR
             }
-            return evaluate(c.get(0), values);
+            return evaluate(c.get(0), values); // Exp -> Term
         }
         if ("Term".equals(label)) {
             if (c.size() == 3) {
-                return evaluate(c.get(0), values) && evaluate(c.get(2), values);
+                return evaluate(c.get(0), values) && evaluate(c.get(2), values); // AND
             }
-            return evaluate(c.get(0), values);
+            return evaluate(c.get(0), values); // Term -> Factor   
         }
         if ("Factor".equals(label)) {
             if (c.size() == 2) {
-                return !evaluate(c.get(1), values);
+                return !evaluate(c.get(1), values); // NOT
             }
             if (c.size() == 3) {
-                return evaluate(c.get(1), values);
+                return evaluate(c.get(1), values); // (Exp)
             }
-            return values.get(c.get(0).getValue());
+            return values.get(c.get(0).getValue()); // VARIABLE  
         }
         throw new RuntimeException("Nodo desconocido: " + label);
     }
