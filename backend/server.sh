@@ -17,4 +17,4 @@ if [[ ! -f "$CLASSES/Server.class" || ! -f "$CLASSES/Main.class" ]]; then
 fi
 
 echo "Iniciando servidor en http://localhost:8080"
-java -classpath "$CLASSES:$CUP_RT" Server
+java -Xss512m -classpath "$CLASSES:$CUP_RT" Server

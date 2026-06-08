@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Batería de pruebas para MatLogEx - Categorías 1 a 6 (sin anidamiento profundo)."""
+"""Batería de pruebas para MatLogEx - Categorías 1 a 7."""
 import json
 import urllib.request
 import urllib.error
@@ -11,7 +11,7 @@ FAIL = 0
 TOTAL = 0
 results = []
 
-def test(id, desc, formula, esperado, check_substring):
+def test(id, desc, formula, esperado, check_substring, timeout=10):
     global PASS, FAIL, TOTAL
     TOTAL += 1
     payload = json.dumps({"formula": formula}).encode("utf-8")
@@ -22,7 +22,7 @@ def test(id, desc, formula, esperado, check_substring):
         method="POST"
     )
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             http_code = resp.status
             body = resp.read().decode("utf-8")
     except urllib.error.HTTPError as e:
@@ -133,6 +133,15 @@ test(31, "Espacios al inicio",               "   A AND B",              200, "re
 test(32, "Espacios al final",                "A AND B   ",              200, "resultado")
 test(33, "Tabulacion como separador",        "A\tAND\tB",               200, "resultado")
 test(34, "Formula vacia",                    "",                        400, "error")
+
+# ============================================================================
+# CATEGORÍA 7: ANIDAMIENTO PROFUNDO
+# ============================================================================
+header("CATEGORIA 7: ANIDAMIENTO PROFUNDO")
+
+sys.setrecursionlimit(5000)
+test(35, "1000 parentesis anidados",       "(" * 1000 + "A" + ")" * 1000,  200, "resultado", timeout=30)
+test(36, "1000 NOTs anidados",             "NOT" * 1000 + "A",             200, "resultado", timeout=30)
 
 # ============================================================================
 # RESUMEN

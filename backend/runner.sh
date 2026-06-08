@@ -5,7 +5,7 @@ set -e
 BASE="/home/cesar/SEXTO CICLO/AUTOMATAS/UNIDAD2/Matlogex/backend"
 
 # Iniciar servidor
-java -classpath "$BASE/../classes:$BASE/../lib/java_cup_runtime.jar" Server &
+java -Xss512m -classpath "$BASE/../classes:$BASE/../lib/java_cup_runtime.jar" Server &
 SERVER_PID=$!
 echo "Servidor iniciado (PID=$SERVER_PID)"
 sleep 2
